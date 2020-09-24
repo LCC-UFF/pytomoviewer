@@ -8,27 +8,27 @@ tags:
   - TIFF
   - Format converter
 authors:
-- name: Victor Wriedt Sapucaia
-   orcid: 0000-0002-5394-2603
-   affiliation: "1"
-- name: Pedro Cortez Fetter Lopes
-   orcid: 0000-0003-1586-2407
-   affiliation: "2"
-- name: Andre Maues Brabo Pereira
-   orcid: 0000-0003-0991-8515
-   affiliation: "2"
-- name: Ricardo Leiderman
-   orcid: 0000-0002-0443-9294
-   affiliation: "2"
-- name: Rodrigo Bagueira Azeredo
-   orcid: 0000-0002-0424-2539
-   affiliation: "3"
+  - name: Victor Wriedt Sapucaia
+    orcid: 0000-0002-5394-2603
+    affiliation: 1
+  - name: Pedro Cortez Fetter Lopes
+    orcid: 0000-0003-1586-2407
+    affiliation: 2
+  - name: Andre Maues Brabo Pereira
+    orcid: 0000-0003-0991-8515
+    affiliation: 2
+  - name: Ricardo Leiderman
+    orcid: 0000-0002-0443-9294
+    affiliation: 2
+  - name: Rodrigo Bagueira Azeredo
+    orcid: 0000-0002-0424-2539
+    affiliation: 3
 affiliations:
-- name: School of Engineering, Fluminense Federal University
+ - name: School of Engineering, Fluminense Federal University
    index: 1
-- name: Institute of Computing, Fluminense Federal University
+ - name: Institute of Computing, Fluminense Federal University
    index: 2
-- name: Institute of Chemistry, Fluminense Federal University
+ - name: Institute of Chemistry, Fluminense Federal University
    index: 3
 date: 13 September 2020
 bibliography: paper.bib
