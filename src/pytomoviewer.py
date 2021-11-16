@@ -5,8 +5,9 @@ Basic current capabilities:
 - Visualize the image stack;
 - Plot image histogram;
 - Resample the data;
-- Export to RAW (JSON) format;
-- Identify unconnected pores;
+- Export to RAW, TIF, JSON and NF format;
+- Identify and remove unconnected pores;
+- Sieves;
 - Replicate a single image;
 """
 import os
@@ -65,9 +66,12 @@ class TomoViewer(QtWidgets.QMainWindow):
         remov_action.triggered.connect(self.removeUnconnected)
         binar_action = QtWidgets.QAction("&Convert to Binary Image...", self)
         binar_action.triggered.connect(self.convertToBinary)
+        seive_action = QtWidgets.QAction("&Seive...", self)
+        seive_action.triggered.connect(self.seives)
         mcomp.addAction(replc_action)
         mcomp.addAction(remov_action)
         mcomp.addAction(binar_action)
+        mcomp.addAction(seive_action)
         mhelp = bar.addMenu("&Help")
         about_action = QtWidgets.QAction("&About...", self)
         about_action.triggered.connect(self.aboutDlg)
@@ -274,7 +278,7 @@ class TomoViewer(QtWidgets.QMainWindow):
 
     # @Slot()
     def removeUnconnected(self):
-        # check if there is at least one image open, and then proceed:
+       # check if there is at least one image open, and then proceed:
         if len(self.m_map) == 0:
             return
         dataset = None
@@ -288,6 +292,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             else:
                 loadedFirst = True
                 dataset = self.m_data[np.newaxis,...] 
+        
         # separate unconnected regions of voxels by labelling each with a different number:    
         imgLabels, numLabels = ndimage.label(dataset)
         # images from all RVE border faces:
@@ -344,6 +349,61 @@ class TomoViewer(QtWidgets.QMainWindow):
         msg.setText(sm)
         msg.setWindowTitle("Info")
         msg.exec_()
+
+    # @Slot()
+    def seives(self):
+       # check if there is at least one image open, and then proceed:
+        if len(self.m_map) == 0:
+            return
+        diameter, ok = QtWidgets.QInputDialog.getInt(self,"Sieve Choice","Diameter:", 1, 1, 2024, 1)
+        if ok:
+            dataset = None
+            loadedFirst = False
+            for filepath in self.m_map:
+                self.loadImageData(filepath,False)
+                self.m_data[self.m_data>0] = 1
+                self.m_data = 1-self.m_data
+                if loadedFirst:
+                    dataset = np.vstack([ dataset, self.m_data[np.newaxis,...] ]) 
+                else:
+                    loadedFirst = True
+                    dataset = self.m_data[np.newaxis,...] 
+            # separate unconnected regions of voxels by labelling each with a different number:    
+            imgLabels, numLabels = ndimage.label(dataset)
+            #print(imgLabels)
+            count = 0
+            numRemoved = 0
+            for loc in ndimage.find_objects(imgLabels):
+                count+=1
+                #print(imgLabels[loc].shape)
+                #print(imgLabels[loc])
+                d2 = imgLabels[loc].shape[0]*imgLabels[loc].shape[0]+imgLabels[loc].shape[1]*imgLabels[loc].shape[1]+imgLabels[loc].shape[2]*imgLabels[loc].shape[2]
+                #print(d2)
+                if d2 < diameter*diameter:
+                    #print("Remove")
+                    imgLabels[imgLabels==count] = 0
+                    numRemoved+=1
+            #print(imgLabels)
+            imgLabels[imgLabels>0] = -1
+            imgLabels += 1
+            imgLabels *= 255
+            # temporary save:
+            nImg = len(self.m_map)
+            self.m_map.clear() # remove all items
+            for i in range(nImg):
+                im = np.uint8(imgLabels[i])
+                bytesPerLine = im.shape[1]
+                image = QtGui.QImage(im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
+                imgNumber = '{:04d}'.format(i)
+                filepath = "temp_image_"+imgNumber+".tif"
+                image.save(filepath)
+                self.m_map.append( filepath )
+            self.loadImageData(self.m_map[self.slideBar.value()], True)
+            sm = "Number of Grains: "+str(numLabels)+"  \nNumber of regions that were removed: "+str(numRemoved)
+            msg = QtWidgets.QMessageBox()
+            msg.setText(sm)
+            msg.setWindowTitle("Info")
+            msg.exec_()      
 
     # @Slot()
     def convertToBinary(self):
