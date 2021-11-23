@@ -158,11 +158,23 @@ class TomoViewer(QtWidgets.QMainWindow):
 
     # @Slot()
     def slideMoveUp(self):
-        self.slideBar.setValue(self.slideBar.value()+1)
+        if not self.buttonPlot.isEnabled():
+            self.slideBar.setValue(self.slideBar.value()+1)
+            return
+        if  not self.buttonHist.isEnabled():
+            self.slideBar.setValue(self.slideBar.value()+1)
+            self.plotHistogram()
+            return
 
     # @Slot()
     def slideMoveDown(self):
-        self.slideBar.setValue(self.slideBar.value()-1)
+        if not self.buttonPlot.isEnabled():
+            self.slideBar.setValue(self.slideBar.value()-1)
+            return
+        if  not self.buttonHist.isEnabled():
+            self.slideBar.setValue(self.slideBar.value()-1)
+            self.plotHistogram()
+            return
 
     # @Slot()
     def openImage(self):
