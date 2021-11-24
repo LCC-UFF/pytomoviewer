@@ -49,13 +49,18 @@ class TomoViewer(QtWidgets.QMainWindow):
         # this is the Menu bar 
         bar = self.menuBar()
         mfile = bar.addMenu("&File")
+        new2d_action = QtWidgets.QAction("&2D Circular Inclusion...", self)
+        new2d_action.triggered.connect(self.newImage2D)
         open_action = QtWidgets.QAction("&Open...", self)
         open_action.triggered.connect(self.openImage)
+        open_action.setShortcut('Ctrl+O') 
         save_action = QtWidgets.QAction("&Export...", self)
         save_action.triggered.connect(self.exportImage)
         exit_action = QtWidgets.QAction("&Exit", self)
         exit_action.setShortcut('Ctrl+Q') 
         exit_action.triggered.connect(QtWidgets.qApp.quit)
+        newmodel = mfile.addMenu("&New")
+        newmodel.addAction(new2d_action)
         mfile.addAction(open_action)
         mfile.addAction(save_action)
         mfile.addAction(exit_action)
@@ -175,6 +180,40 @@ class TomoViewer(QtWidgets.QMainWindow):
             self.slideBar.setValue(self.slideBar.value()-1)
             self.plotHistogram()
             return
+
+    # @Slot()
+    def newImage2D(self):
+        nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Length:", 100, 1, 2024, 1)
+        if ok1:
+            f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3)
+            if ok2:
+                ny = nx
+                r = np.sqrt(4*f/np.pi)*nx*.5
+                self.m_data = np.zeros([nx, ny, 1])
+                for ii in range(nx):
+                    for jj in range(ny):
+                        val = (ii+0.5-nx/2)**2+(jj+0.5-ny/2)**2 - r**2
+                        if val < 0:
+                            self.m_data[ii, jj, 0] = 255
+
+                im = np.uint8(self.m_data)
+                bytesPerLine = im.shape[1]
+                image = QtGui.QImage(
+                    im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
+                imgNumber = '{:04d}'.format(0)
+                filepath = "temp_image_"+imgNumber+".tif"
+                image.save(filepath)
+                if len(self.m_map) > 0:
+                    self.removeTempImagens()
+                self.m_map.clear()  # remove all items
+                self.m_map.append(filepath)                
+                self.loadImageData(self.m_map[self.slideBar.value()], True)
+                self.buttonPlus.setEnabled(True)
+                self.buttonMinus.setEnabled(True)
+                self.slideBar.setMaximum(len(self.m_map)-1)
+                self.slideBar.setValue(0)
+                self.slideBar.setEnabled(True)
+                self.labelSliceId.setText("Slice = 1")
 
     # @Slot()
     def openImage(self):
@@ -404,7 +443,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             self.m_map.clear() # remove all items
             for i in range(nImg):
                 im = np.uint8(imgLabels[i])
-                bytesPerLine = im.shape[1]
+                bytesPerLine = im.shape[1]                
                 image = QtGui.QImage(im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
                 imgNumber = '{:04d}'.format(i)
                 filepath = "temp_image_"+imgNumber+".tif"
@@ -427,6 +466,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             nImg = len(self.m_map)
             for i in range(nImg):
                 self.loadImageData(self.m_map[i],False)
+
                 self.m_data[self.m_data>=threshold] = 255
                 self.m_data[self.m_data<threshold]  = 0
                 im = np.uint8(self.m_data)
@@ -440,7 +480,7 @@ class TomoViewer(QtWidgets.QMainWindow):
 
     # @Slot()
     def aboutDlg(self):
-        sm = """pyTomoViewer\nVersion 1.0.0\n2020\nLicense GPL 3.0\n\nThe authors and the involved Institutions are not responsible for the use or bad use of the program and their results. The authors have no legal dulty or responsability for any person or company for the direct or indirect damage caused resulting from the use of any information or usage of the program available here. The user is responsible for all and any conclusion made with the program. There is no warranty for the program use. """
+        sm = """<center>pyTomoViewer</center><center>Version 1.0.0</center><center>2020</center><center>License GPL 3.0</center><br><center>The authors and the involved Institutions are not responsible for the use or bad use of the program and their results. The authors have no legal dulty or responsability for any person or company for the direct or indirect damage caused resulting from the use of any information or usage of the program available here. The user is responsible for all and any conclusion made with the program. There is no warranty for the program use.</center>"""
         msg = QtWidgets.QMessageBox()
         msg.setText(sm)
         msg.setWindowTitle("About")
