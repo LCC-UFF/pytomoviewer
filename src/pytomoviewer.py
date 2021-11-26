@@ -49,8 +49,10 @@ class TomoViewer(QtWidgets.QMainWindow):
         # this is the Menu bar 
         bar = self.menuBar()
         mfile = bar.addMenu("&File")
-        new2d_action = QtWidgets.QAction("&2D Circular Inclusion...", self)
-        new2d_action.triggered.connect(self.newImage2D)
+        new2dci_action = QtWidgets.QAction("&2D Circular Inclusion...", self)
+        new2dci_action.triggered.connect(self.newImage2D_CI)
+        new3dsi_action = QtWidgets.QAction("&3D Spherical Inclusion...", self)
+        new3dsi_action.triggered.connect(self.newImage3D_SI)
         open_action = QtWidgets.QAction("&Open...", self)
         open_action.triggered.connect(self.openImage)
         open_action.setShortcut('Ctrl+O') 
@@ -60,7 +62,8 @@ class TomoViewer(QtWidgets.QMainWindow):
         exit_action.setShortcut('Ctrl+Q') 
         exit_action.triggered.connect(QtWidgets.qApp.quit)
         newmodel = mfile.addMenu("&New")
-        newmodel.addAction(new2d_action)
+        newmodel.addAction(new2dci_action)
+        newmodel.addAction(new3dsi_action)
         mfile.addAction(open_action)
         mfile.addAction(save_action)
         mfile.addAction(exit_action)
@@ -182,7 +185,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             return
 
     # @Slot()
-    def newImage2D(self):
+    def newImage2D_CI(self):
         nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Length:", 100, 1, 2024, 1)
         if ok1:
             f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3)
@@ -196,17 +199,52 @@ class TomoViewer(QtWidgets.QMainWindow):
                         if val < 0:
                             self.m_data[ii, jj, 0] = 255
 
+                if len(self.m_map) > 0:
+                    self.removeTempImagens()
+                self.m_map.clear()  # remove all items
                 im = np.uint8(self.m_data)
                 bytesPerLine = im.shape[1]
                 image = QtGui.QImage(
                     im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
                 imgNumber = '{:04d}'.format(0)
                 filepath = "temp_image_"+imgNumber+".tif"
-                image.save(filepath)
+                image.save(filepath)                
+                self.m_map.append(filepath)                
+                self.loadImageData(self.m_map[self.slideBar.value()], True)
+                self.buttonPlus.setEnabled(True)
+                self.buttonMinus.setEnabled(True)
+                self.slideBar.setMaximum(len(self.m_map)-1)
+                self.slideBar.setValue(0)
+                self.slideBar.setEnabled(True)
+                self.labelSliceId.setText("Slice = 1")
+
+    # @Slot()
+    def newImage3D_SI(self):
+        nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Length:", 100, 1, 2024, 1)
+        if ok1:
+            f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3)
+            if ok2:
+                ny = nx
+                nz = nx
+                r = np.sqrt(4*f/np.pi)*nx*.5
+                self.m_data = np.zeros([nx, ny, nz])
+                for ii in range(nx):
+                    for jj in range(ny):
+                        for kk in range(nz):
+                            val = (ii+0.5-nx/2)**2+(jj+0.5-ny/2)**2+(kk+0.5-nz/2)**2 - r**2
+                            if val < 0:
+                                self.m_data[ii, jj, kk] = 255
+
                 if len(self.m_map) > 0:
                     self.removeTempImagens()
                 self.m_map.clear()  # remove all items
-                self.m_map.append(filepath)                
+                for kk in range(nz):
+                    im = np.uint8(self.m_data[:,:,kk])
+                    bytesPerLine = im.shape[1]
+                    image = QtGui.QImage(im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
+                    filepath = "temp_image_"+str(kk)+".tif"
+                    image.save(filepath)
+                    self.m_map.append(filepath)                             
                 self.loadImageData(self.m_map[self.slideBar.value()], True)
                 self.buttonPlus.setEnabled(True)
                 self.buttonMinus.setEnabled(True)
