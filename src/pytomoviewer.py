@@ -53,6 +53,8 @@ class TomoViewer(QtWidgets.QMainWindow):
         new2dci_action.triggered.connect(self.newImage2D_CI)
         new3dsi_action = QtWidgets.QAction("&3D Spherical Inclusion...", self)
         new3dsi_action.triggered.connect(self.newImage3D_SI)
+        new3dbci_action = QtWidgets.QAction("&3D Bidirectional Crossed Inclusion...", self)
+        new3dbci_action.triggered.connect(self.newImage3D_BCI)        
         open_action = QtWidgets.QAction("&Open...", self)
         open_action.triggered.connect(self.openImage)
         open_action.setShortcut('Ctrl+O') 
@@ -64,6 +66,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         newmodel = mfile.addMenu("&New")
         newmodel.addAction(new2dci_action)
         newmodel.addAction(new3dsi_action)
+        newmodel.addAction(new3dbci_action)
         mfile.addAction(open_action)
         mfile.addAction(save_action)
         mfile.addAction(exit_action)
@@ -252,6 +255,45 @@ class TomoViewer(QtWidgets.QMainWindow):
                 self.slideBar.setValue(0)
                 self.slideBar.setEnabled(True)
                 self.labelSliceId.setText("Slice = 1")
+                
+    # @Slot()
+    def newImage3D_BCI(self):
+        nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Nx:", 200, 1, 2024, 1)
+        if ok1:
+            ny, ok2 = QtWidgets.QInputDialog.getInt(self,"Size","Ny:", 100, 1, 2024, 1)
+            if ok2:
+                nz, ok3 = QtWidgets.QInputDialog.getInt(self,"Size","Nz:", 100, 1, 2024, 1)
+                if ok3:
+                    r, ok4 = QtWidgets.QInputDialog.getInt(self,"Radius","Radius:", 18, 0, 2024, 1)
+                    if ok4:
+                        self.m_data = np.zeros([nx, ny, nz])
+                        for ii in range(int(nx/2)):
+                            for jj in range(ny):
+                                val_bot = (ii+0.5-nx/4)**2+(jj+0.5-ny/2)**2 - r**2
+                                for kk in range(nz):
+                                    val_top = (kk+0.5-nz/2)**2+(ii+0.5-nx/4)**2 - r**2
+                                    if val_bot < 0:
+                                        self.m_data[ii + int(nx/2), jj, kk] = 255
+                                    if val_top < 0:
+                                        self.m_data[ii, jj, kk] = 255
+                        
+                        if len(self.m_map) > 0:
+                            self.removeTempImagens()
+                        self.m_map.clear()  # remove all items
+                        for kk in range(nz):
+                            im = np.uint8(self.m_data[:,:,kk])
+                            bytesPerLine = im.shape[1]
+                            image = QtGui.QImage(im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
+                            filepath = "temp_image_"+str(kk)+".tif"
+                            image.save(filepath)
+                            self.m_map.append(filepath)
+                        self.loadImageData(self.m_map[0], True)
+                        self.buttonPlus.setEnabled(True)
+                        self.buttonMinus.setEnabled(True)
+                        self.slideBar.setMaximum(len(self.m_map)-1)
+                        self.slideBar.setValue(0)
+                        self.slideBar.setEnabled(True)
+                        self.labelSliceId.setText("Slice = 1")
 
     # @Slot()
     def openImage(self):
