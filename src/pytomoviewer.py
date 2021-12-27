@@ -170,15 +170,22 @@ class TomoViewer(QtWidgets.QMainWindow):
     def changeValue(self, _value):
         filename = self.m_map[_value]
         print(filename)
-        self.loadImageData(filename,True)
-        self.labelSliceId.setText("Slice = "+str(_value+1))
+        if not self.buttonPlot.isEnabled():
+            self.loadImageData(filename,True)
+            self.labelSliceId.setText("Slice = "+str(_value+1))
+            return
+        if not self.buttonHist.isEnabled():
+            self.loadImageData(filename,True)
+            self.labelSliceId.setText("Slice = "+str(_value+1))
+            self.plotHistogram()
+            return       
 
     # @Slot()
     def slideMoveUp(self):
         if not self.buttonPlot.isEnabled():
             self.slideBar.setValue(self.slideBar.value()+1)
             return
-        if  not self.buttonHist.isEnabled():
+        if not self.buttonHist.isEnabled():
             self.slideBar.setValue(self.slideBar.value()+1)
             self.plotHistogram()
             return
@@ -188,7 +195,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         if not self.buttonPlot.isEnabled():
             self.slideBar.setValue(self.slideBar.value()-1)
             return
-        if  not self.buttonHist.isEnabled():
+        if not self.buttonHist.isEnabled():
             self.slideBar.setValue(self.slideBar.value()-1)
             self.plotHistogram()
             return
