@@ -17,7 +17,7 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_qt5agg import (FigureCanvasQTAgg, NavigationToolbar2QT)
 from matplotlib.figure import Figure
-from PyQt5 import QtCore, QtGui, QtWidgets 
+from PyQt5 import QtCore, QtGui, QtWidgets
 from scipy import ndimage
 
 ORGANIZATION_NAME = 'LCC-IC-UFF'
@@ -62,7 +62,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         save_action.triggered.connect(self.exportImage)
         exit_action = QtWidgets.QAction("&Exit", self)
         exit_action.setShortcut('Ctrl+Q') 
-        exit_action.triggered.connect(QtWidgets.qApp.quit)
+        exit_action.triggered.connect(self.closeEvent)
         newmodel = mfile.addMenu("&New")
         newmodel.addAction(new2dci_action)
         newmodel.addAction(new3dsi_action)
@@ -139,6 +139,12 @@ class TomoViewer(QtWidgets.QMainWindow):
         self.m_image = None
         if len(self.m_map) > 0:
             self.removeTempImagens()
+
+    # @Slot()
+    def closeEvent(self):
+        result = QtWidgets.QMessageBox.question(self,"Exit","Are you sure you want to exit the program?",QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No)        
+        if result == QtWidgets.QMessageBox.Yes:
+            QtWidgets.qApp.quit()
 
     # @Slot()
     def plotImage(self):
