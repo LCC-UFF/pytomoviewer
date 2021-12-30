@@ -15,10 +15,13 @@ import sys
 import json
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib.backends.backend_qt5agg import (FigureCanvasQTAgg, NavigationToolbar2QT)
 from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets
 from scipy import ndimage
+from collections import defaultdict
 
 ORGANIZATION_NAME = 'LCC-IC-UFF'
 ORGANIZATION_DOMAIN = 'www.ic.uff.br/~andre/'
@@ -77,11 +80,14 @@ class TomoViewer(QtWidgets.QMainWindow):
         remov_action.triggered.connect(self.removeUnconnected)
         binar_action = QtWidgets.QAction("&Convert to Binary Image...", self)
         binar_action.triggered.connect(self.convertToBinary)
+        phases_action = QtWidgets.QAction("&Colors per slice...", self)
+        phases_action.triggered.connect(self.colorsPerSlice)
         seive_action = QtWidgets.QAction("&Seive...", self)
         seive_action.triggered.connect(self.seives)
         mcomp.addAction(replc_action)
         mcomp.addAction(remov_action)
         mcomp.addAction(binar_action)
+        mcomp.addAction(phases_action)
         mcomp.addAction(seive_action)
         mhelp = bar.addMenu("&Help")
         about_action = QtWidgets.QAction("&About...", self)
@@ -559,7 +565,6 @@ class TomoViewer(QtWidgets.QMainWindow):
             nImg = len(self.m_map)
             for i in range(nImg):
                 self.loadImageData(self.m_map[i],False)
-
                 self.m_data[self.m_data>=threshold] = 255
                 self.m_data[self.m_data<threshold]  = 0
                 im = np.uint8(self.m_data)
@@ -570,6 +575,98 @@ class TomoViewer(QtWidgets.QMainWindow):
                 image.save(filepath)
                 self.m_map[i] = filepath 
             self.loadImageData(self.m_map[self.slideBar.value()], True)
+
+    # @Slot()
+    def colorsPerSlice(self):
+        # check if there is at least one image open, and then proceed:
+        if len(self.m_map) == 0:
+            return
+        materials = {}
+        materials_slices = defaultdict(list)
+        vol = self.m_data.shape[1]*self.m_data.shape[0]
+        vol_total = vol*len(self.m_map)
+        for filepath in self.m_map:
+            self.loadImageData(filepath, False)
+            mat_i, cmat_i = np.unique(self.m_data, return_counts=True)
+            for i in range(len(mat_i)):
+                if mat_i[i] in materials:
+                    materials[mat_i[i]] += cmat_i[i]
+                else:
+                    materials[mat_i[i]] = cmat_i[i]
+        for i in materials: 
+            materials_slices[i] = []
+        for filepath in self.m_map:
+            self.loadImageData(filepath, False)
+            mat_i, cmat_i = np.unique(self.m_data, return_counts=True) 
+            for i in range(len(mat_i)):          
+                materials_slices[mat_i[i]].append(cmat_i[i] * 100.0/vol)
+            if len(mat_i) < len(materials):
+                for j in materials_slices.keys():
+                    if j not in mat_i:
+                        materials_slices[j].append(0.0)     
+        materials = dict(sorted(materials.items(), key=lambda x: x[0]))
+        materials_slices = dict(sorted(materials_slices.items(), key=lambda x: x[0]))       
+        mat = np.array(list(materials.keys()))
+        cmat = np.array(list(materials.values()))
+        cmat = cmat*100.0/vol_total
+        # plot colors per slice
+        for f in range(mat.shape[0]):
+            plt.figure(f)
+            plt.title('%% of material %s per slice' % mat[f])
+            plt.axis([0, len(materials_slices[mat[f]])-1, 0.0, 100.0])
+            plt.xlabel('Slice')
+            plt.ylabel('%% of material %s' % mat[f])
+            x_slices = list(range(len(materials_slices[mat[f]])))
+            y_percent = materials_slices[mat[f]]
+            maxpercent = max(y_percent)
+            minpercent = min(y_percent)
+            maxpercentslice = x_slices[y_percent.index(maxpercent)]
+            minpercentslice = x_slices[y_percent.index(minpercent)]
+            maxtext = 'max = {:.2f}%\nslice nº {:.0f}'.format(maxpercent, maxpercentslice)
+            mintext = 'min = {:.2f}%\nslice nº {:.0f}'.format(minpercent, minpercentslice)
+            bbox_props = dict(boxstyle="square,pad=0.3", fc="w", ec="k", lw=0.72)
+            slicepctg, = plt.plot(x_slices, y_percent, 'g', label = 'slice %')
+            avrgpctg, = plt.plot(range(len(materials_slices[mat[f]])), [cmat[f]]*len(materials_slices[mat[f]]), 'r--', label = 'average (%.2f%%)' % cmat[f])
+            x_maxbox = maxpercentslice/len(materials_slices[mat[f]]) + 0.2
+            x_minbox = minpercentslice/len(materials_slices[mat[f]]) + 0.2
+            y_maxbox = maxpercent/100 + 0.1
+            y_minbox = minpercent/100 - 0.1
+            arrowprops_max=dict(arrowstyle="->",connectionstyle="angle,angleA=0,angleB=60")
+            arrowprops_min=dict(arrowstyle="->",connectionstyle="angle,angleA=0,angleB=120")
+            kw_max = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_max, bbox=bbox_props, ha="left", va="bottom")
+            kw_min = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_min, bbox=bbox_props, ha="left", va="top")
+            if maxpercent > 80 and maxpercentslice < len(materials_slices[mat[f]])/2:
+                y_maxbox = maxpercent/100 - 0.1
+                arrowprops_max=dict(arrowstyle="->",connectionstyle="angle,angleA=0,angleB=120")
+                kw_max = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_max, bbox=bbox_props, ha="left", va="top")
+            elif maxpercent < 80 and maxpercentslice > len(materials_slices[mat[f]])/2:
+                x_maxbox = maxpercentslice/len(materials_slices[mat[f]]) - 0.1
+                arrowprops_max=dict(arrowstyle="->",connectionstyle="angle,angleA=0,angleB=120")
+                kw_max = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_max, bbox=bbox_props, ha="right", va="bottom")
+            elif maxpercent > 80 and maxpercentslice > len(materials_slices[mat[f]])/2:
+                x_maxbox = maxpercentslice/len(materials_slices[mat[f]]) - 0.1
+                y_maxbox = maxpercent/100 - 0.1
+                kw_max = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_max, bbox=bbox_props, ha="right", va="top")
+            if minpercent < 20 and minpercentslice < len(materials_slices[mat[f]])/2:
+                y_minbox = minpercent/100 + 0.1
+                arrowprops_min=dict(arrowstyle="->",connectionstyle="angle,angleA=0,angleB=60")
+                kw_min = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_min, bbox=bbox_props, ha="left", va="bottom")
+            elif minpercent > 20 and minpercentslice > len(materials_slices[mat[f]])/2:
+                x_minbox = minpercentslice/len(materials_slices[mat[f]]) - 0.1
+                arrowprops_min=dict(arrowstyle="->",connectionstyle="angle,angleA=0,angleB=60")
+                kw_min = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_min, bbox=bbox_props, ha="right", va="top")
+            elif minpercent < 20 and minpercentslice > len(materials_slices[mat[f]])/2:
+                x_minbox = minpercentslice/len(materials_slices[mat[f]]) - 0.1
+                y_minbox = minpercent/100 + 0.1
+                kw_min = dict(xycoords='data', textcoords='axes fraction', arrowprops=arrowprops_min, bbox=bbox_props, ha="right", va="bottom")
+            plt.annotate(maxtext, xy=(maxpercentslice, maxpercent), xytext=(x_maxbox, y_maxbox), **kw_max)
+            plt.annotate(mintext, xy=(minpercentslice, minpercent), xytext=(x_minbox, y_minbox), **kw_min)
+            stddev = np.std(materials_slices[mat[f]])
+            varcoef = (stddev / cmat[f]) * 100
+            stddev_leg = mpatches.Patch(color='white', label='Standard deviation: %.2f (%%)' % stddev)
+            varcoef_leg = mpatches.Patch(color='white', label='Coefficient of variation: %.2f%%' % varcoef)
+            plt.legend(handles=[slicepctg, avrgpctg, stddev_leg, varcoef_leg], loc='best')
+            plt.show()
 
     # @Slot()
     def aboutDlg(self):
