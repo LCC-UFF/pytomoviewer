@@ -22,6 +22,8 @@ from matplotlib.figure import Figure
 from PyQt5 import QtCore, QtGui, QtWidgets
 from scipy import ndimage
 from collections import defaultdict
+from skimage import io
+from PIL import Image
 
 ORGANIZATION_NAME = 'LCC-IC-UFF'
 ORGANIZATION_DOMAIN = 'www.ic.uff.br/~andre/'
@@ -34,13 +36,13 @@ class TomoViewer(QtWidgets.QMainWindow):
     # Override the class constructor
     def __init__(self, parent=None):
         super(TomoViewer, self).__init__(parent)
-        # setting main Widget 
+        # setting main Widget
         self.main = QtWidgets.QWidget()
-        self.setCentralWidget(self.main)        
-        # setting title 
-        self.setWindowTitle(APPLICATION_NAME) 
+        self.setCentralWidget(self.main)
+        # setting title
+        self.setWindowTitle(APPLICATION_NAME)
         # setting geometry and minimum size
-        self.setGeometry(100, 100, 600, 600) 
+        self.setGeometry(100, 100, 600, 600)
         self.setMinimumSize(QtCore.QSize(400, 400))
         # a figure instance to plot on
         self.figure = Figure()
@@ -49,7 +51,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         mpl.rcParams['image.cmap'] = 'gray' # magma, seismic
         # this is the Navigation widget
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
-        # this is the Menu bar 
+        # this is the Menu bar
         bar = self.menuBar()
         mfile = bar.addMenu("&File")
         new2dci_action = QtWidgets.QAction("&2D Circular Inclusion...", self)
@@ -57,14 +59,14 @@ class TomoViewer(QtWidgets.QMainWindow):
         new3dsi_action = QtWidgets.QAction("&3D Spherical Inclusion...", self)
         new3dsi_action.triggered.connect(self.newImage3D_SI)
         new3dbci_action = QtWidgets.QAction("&3D Bidirectional Crossed Inclusion...", self)
-        new3dbci_action.triggered.connect(self.newImage3D_BCI)        
+        new3dbci_action.triggered.connect(self.newImage3D_BCI)
         open_action = QtWidgets.QAction("&Open...", self)
         open_action.triggered.connect(self.openImage)
-        open_action.setShortcut('Ctrl+O') 
+        open_action.setShortcut('Ctrl+O')
         save_action = QtWidgets.QAction("&Export...", self)
         save_action.triggered.connect(self.exportImage)
         exit_action = QtWidgets.QAction("&Exit", self)
-        exit_action.setShortcut('Ctrl+Q') 
+        exit_action.setShortcut('Ctrl+Q')
         exit_action.triggered.connect(self.closeEvent)
         newmodel = mfile.addMenu("&New")
         newmodel.addAction(new2dci_action)
@@ -97,7 +99,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         self.slideBar = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.slideBar.setMinimum(0)
         self.slideBar.setTickPosition(QtWidgets.QSlider.TicksBothSides)
-        self.slideBar.setTickInterval(1)        
+        self.slideBar.setTickInterval(1)
         self.slideBar.setSingleStep(1)
         self.slideBar.setEnabled(False)
         self.slideBar.valueChanged[int].connect(self.changeValue)
@@ -107,11 +109,11 @@ class TomoViewer(QtWidgets.QMainWindow):
         self.buttonPlus.clicked.connect(self.slideMoveUp)
         self.buttonMinus = QtWidgets.QPushButton('-')
         self.buttonMinus.setMaximumSize(QtCore.QSize(25, 30))
-        self.buttonMinus.setEnabled(False) 
-        self.buttonMinus.clicked.connect(self.slideMoveDown)        
+        self.buttonMinus.setEnabled(False)
+        self.buttonMinus.clicked.connect(self.slideMoveDown)
         self.buttonPlot = QtWidgets.QPushButton('View Image')
         self.buttonPlot.setEnabled(False)
-        self.buttonPlot.clicked.connect(self.plotImage)       
+        self.buttonPlot.clicked.connect(self.plotImage)
         self.buttonHist = QtWidgets.QPushButton('View Histogram')
         self.buttonHist.setEnabled(False)
         self.buttonHist.clicked.connect(self.plotHistogram)
@@ -123,9 +125,9 @@ class TomoViewer(QtWidgets.QMainWindow):
         mainLayout.addWidget(self.toolbar)
         layoutH2 = QtWidgets.QHBoxLayout()
         layoutH3 = QtWidgets.QHBoxLayout()
-        layoutH2.addWidget(self.buttonMinus)        
-        layoutH2.addWidget(self.slideBar)        
-        layoutH2.addWidget(self.buttonPlus)  
+        layoutH2.addWidget(self.buttonMinus)
+        layoutH2.addWidget(self.slideBar)
+        layoutH2.addWidget(self.buttonPlus)
         layoutH3.addWidget(self.buttonPlot)
         layoutH3.addWidget(self.buttonHist)
         layoutH3.addWidget(self.labelDimensions)
@@ -133,34 +135,36 @@ class TomoViewer(QtWidgets.QMainWindow):
         layoutH3.addWidget(self.labelSliceId)
         mainLayout.addWidget(self.canvas, QtWidgets.QSizePolicy.MinimumExpanding)
         mainLayout.addLayout(layoutH2)
-        mainLayout.addLayout(layoutH3)           
+        mainLayout.addLayout(layoutH3)
         # initialize the main image data
         self.m_data = None # numpy array
         self.m_image = None # QImage object
-        self.m_map = []  # path of all image files 
+        self.m_map = []  # path of all image files
 
     def __del__(self):
-        # remove temporary data: 
+        # remove temporary data:
         self.m_data = None
         self.m_image = None
         if len(self.m_map) > 0:
             self.removeTempImagens()
 
     # @Slot()
-    def closeEvent(self):
-        result = QtWidgets.QMessageBox.question(self,"Exit","Are you sure you want to exit the program?",QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No)        
+    def closeEvent(self, event):
+        result = QtWidgets.QMessageBox.question(self,"Exit","Are you sure you want to exit the program?",QtWidgets.QMessageBox.Yes| QtWidgets.QMessageBox.No)
         if result == QtWidgets.QMessageBox.Yes:
             QtWidgets.qApp.quit()
+        else:
+            event.ignore()
 
     # @Slot()
     def plotImage(self):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
-        img = ax.imshow(self.m_data,vmin=0,vmax=255)      
+        img = ax.imshow(self.m_data,vmin=0,vmax=255)
         self.figure.colorbar(img)
         ax.figure.canvas.draw()
-        self.buttonPlot.setEnabled(False)          
-        self.buttonHist.setEnabled(True)        
+        self.buttonPlot.setEnabled(False)
+        self.buttonHist.setEnabled(True)
 
     # @Slot()
     def plotHistogram(self):
@@ -169,8 +173,8 @@ class TomoViewer(QtWidgets.QMainWindow):
         ax.hist(self.m_data.flatten(), bins=256, fc='k', ec='k')
         ax.set(xlim=(-4, 259))
         ax.figure.canvas.draw()
-        self.buttonPlot.setEnabled(True)          
-        self.buttonHist.setEnabled(False)   
+        self.buttonPlot.setEnabled(True)
+        self.buttonHist.setEnabled(False)
 
     # @Slot()
     def changeValue(self, _value):
@@ -184,7 +188,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             self.loadImageData(filename,True)
             self.labelSliceId.setText("Slice = "+str(_value+1))
             self.plotHistogram()
-            return       
+            return
 
     # @Slot()
     def slideMoveUp(self):
@@ -230,8 +234,8 @@ class TomoViewer(QtWidgets.QMainWindow):
                     im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
                 imgNumber = '{:04d}'.format(0)
                 filepath = "temp_image_"+imgNumber+".tif"
-                image.save(filepath)                
-                self.m_map.append(filepath)                
+                image.save(filepath)
+                self.m_map.append(filepath)
                 self.loadImageData(self.m_map[self.slideBar.value()], True)
                 self.buttonPlus.setEnabled(True)
                 self.buttonMinus.setEnabled(True)
@@ -266,7 +270,7 @@ class TomoViewer(QtWidgets.QMainWindow):
                     image = QtGui.QImage(im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
                     filepath = "temp_image_"+str(kk)+".tif"
                     image.save(filepath)
-                    self.m_map.append(filepath)                             
+                    self.m_map.append(filepath)
                 self.loadImageData(self.m_map[self.slideBar.value()], True)
                 self.buttonPlus.setEnabled(True)
                 self.buttonMinus.setEnabled(True)
@@ -274,7 +278,7 @@ class TomoViewer(QtWidgets.QMainWindow):
                 self.slideBar.setValue(0)
                 self.slideBar.setEnabled(True)
                 self.labelSliceId.setText("Slice = 1")
-                
+
     # @Slot()
     def newImage3D_BCI(self):
         nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Nx:", 200, 1, 2024, 1)
@@ -295,7 +299,7 @@ class TomoViewer(QtWidgets.QMainWindow):
                                         self.m_data[ii + int(nx/2), jj, kk] = 255
                                     if val_top < 0:
                                         self.m_data[ii, jj, kk] = 255
-                        
+
                         if len(self.m_map) > 0:
                             self.removeTempImagens()
                         self.m_map.clear()  # remove all items
@@ -323,10 +327,19 @@ class TomoViewer(QtWidgets.QMainWindow):
                 self.removeTempImagens()
             self.m_map.clear() # remove all items
             for filepath in files:
-                self.m_map.append( filepath )
+                img = Image.open(filepath)
+                if img.n_frames > 1:
+                    dirname = os.path.dirname(filepath)
+                    filename = os.path.basename(filepath)
+                    split_tiff_stack(input_filepath=filepath, output_filepath=os.path.join(dirname, filename + "_split", filename))
+                    filepaths = os.listdir(os.path.join(dirname, filename + "_split"))
+                    for filepath in filepaths:
+                        self.m_map.append(os.path.join(dirname, filename + "_split", filepath))
+                else:
+                    self.m_map.append( filepath )
             self.loadImageData(files[0],True)
-            self.buttonPlus.setEnabled(True) 
-            self.buttonMinus.setEnabled(True) 
+            self.buttonPlus.setEnabled(True)
+            self.buttonMinus.setEnabled(True)
             self.slideBar.setMaximum(len(self.m_map)-1)
             self.slideBar.setValue(0)
             self.slideBar.setEnabled(True)
@@ -343,28 +356,28 @@ class TomoViewer(QtWidgets.QMainWindow):
             if filename[0][-4:] != '.raw':
                 filename = filename[0] + '.raw'
             else:
-                filename = filename[0] 
-            materials = {} 
+                filename = filename[0]
+            materials = {}
             # Save image data in RAW format
             with open(filename, "bw") as file_raw:
                 for filepath in self.m_map:
                     self.loadImageData(filepath,False)
                     mat_i, cmat_i = np.unique(self.m_data,return_counts=True)
                     for i in range(len(mat_i)):
-                        if mat_i[i] in materials:  
+                        if mat_i[i] in materials:
                             materials[mat_i[i]] += cmat_i[i]
                         else:
                             materials[mat_i[i]] = cmat_i[i]
                     # Save image data in binary format
-                    self.m_data.tofile(file_raw) 
+                    self.m_data.tofile(file_raw)
             self.loadImageData(self.m_map[self.slideBar.value()],True)
             materials = dict(sorted(materials.items(), key=lambda x: x[0]))
             dimensions = np.array([self.m_data.shape[1],self.m_data.shape[0],len(self.m_map)],dtype=int)
             vol = self.m_data.shape[1]*self.m_data.shape[0]*len(self.m_map)
-            mat = np.array(list(materials.keys()))  
-            cmat = np.array(list(materials.values()))   
+            mat = np.array(list(materials.keys()))
+            cmat = np.array(list(materials.values()))
             mat = np.vstack((mat, np.zeros((mat.shape[0]),dtype=int))).T
-            cmat = cmat*100.0/vol      
+            cmat = cmat*100.0/vol
             jdata = {}
             jdata["type_of_analysis"] = 0
             jdata["type_of_solver"] = 0
@@ -372,7 +385,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             jdata["voxel_size"] = 1.0
             jdata["solver_tolerance"] = 1.0e-6
             jdata["number_of_iterations"] = 1000
-            jdata["image_dimensions"] = dimensions.tolist()          
+            jdata["image_dimensions"] = dimensions.tolist()
             jdata["refinement"] = 1
             jdata["number_of_materials"] = mat.shape[0]
             jdata["properties_of_materials"] = mat.tolist()
@@ -419,8 +432,8 @@ class TomoViewer(QtWidgets.QMainWindow):
             for _ in range(slices):
                 self.m_map.append( filepath )
             self.loadImageData(filepath,True)
-            self.buttonPlus.setEnabled(True) 
-            self.buttonMinus.setEnabled(True) 
+            self.buttonPlus.setEnabled(True)
+            self.buttonMinus.setEnabled(True)
             self.slideBar.setMaximum(len(self.m_map)-1)
             self.slideBar.setValue(0)
             self.slideBar.setEnabled(True)
@@ -438,12 +451,12 @@ class TomoViewer(QtWidgets.QMainWindow):
             self.m_data[self.m_data>0] = 1
             self.m_data = 1-self.m_data
             if loadedFirst:
-                dataset = np.vstack([ dataset, self.m_data[np.newaxis,...] ]) 
+                dataset = np.vstack([ dataset, self.m_data[np.newaxis,...] ])
             else:
                 loadedFirst = True
-                dataset = self.m_data[np.newaxis,...] 
-        
-        # separate unconnected regions of voxels by labelling each with a different number:    
+                dataset = self.m_data[np.newaxis,...]
+
+        # separate unconnected regions of voxels by labelling each with a different number:
         imgLabels, numLabels = ndimage.label(dataset)
         # images from all RVE border faces:
         imgXi = imgLabels[:,:,0]
@@ -466,7 +479,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         # proceed the same way for the case with more than one slice:
         if len(self.m_map) > 1:
             imgZi = imgLabels[0]
-            imgZf = imgLabels[-1]                
+            imgZf = imgLabels[-1]
             imgZp = imgZi*imgZf
             for index, e in np.ndenumerate(imgZp):
                 if e > 0:
@@ -514,11 +527,11 @@ class TomoViewer(QtWidgets.QMainWindow):
                 self.m_data[self.m_data>0] = 1
                 self.m_data = 1-self.m_data
                 if loadedFirst:
-                    dataset = np.vstack([ dataset, self.m_data[np.newaxis,...] ]) 
+                    dataset = np.vstack([ dataset, self.m_data[np.newaxis,...] ])
                 else:
                     loadedFirst = True
-                    dataset = self.m_data[np.newaxis,...] 
-            # separate unconnected regions of voxels by labelling each with a different number:    
+                    dataset = self.m_data[np.newaxis,...]
+            # separate unconnected regions of voxels by labelling each with a different number:
             imgLabels, numLabels = ndimage.label(dataset)
             #print(imgLabels)
             count = 0
@@ -542,7 +555,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             self.m_map.clear() # remove all items
             for i in range(nImg):
                 im = np.uint8(imgLabels[i])
-                bytesPerLine = im.shape[1]                
+                bytesPerLine = im.shape[1]
                 image = QtGui.QImage(im, im.shape[1], im.shape[0], bytesPerLine, QtGui.QImage.Format_Grayscale8)
                 imgNumber = '{:04d}'.format(i)
                 filepath = "temp_image_"+imgNumber+".tif"
@@ -553,7 +566,7 @@ class TomoViewer(QtWidgets.QMainWindow):
             msg = QtWidgets.QMessageBox()
             msg.setText(sm)
             msg.setWindowTitle("Info")
-            msg.exec_()      
+            msg.exec_()
 
     # @Slot()
     def convertToBinary(self):
@@ -573,7 +586,7 @@ class TomoViewer(QtWidgets.QMainWindow):
                 imgNumber = '{:04d}'.format(i)
                 filepath = "temp_image_"+imgNumber+".tif"
                 image.save(filepath)
-                self.m_map[i] = filepath 
+                self.m_map[i] = filepath
             self.loadImageData(self.m_map[self.slideBar.value()], True)
 
     # @Slot()
@@ -593,19 +606,19 @@ class TomoViewer(QtWidgets.QMainWindow):
                     materials[mat_i[i]] += cmat_i[i]
                 else:
                     materials[mat_i[i]] = cmat_i[i]
-        for i in materials: 
+        for i in materials:
             materials_slices[i] = []
         for filepath in self.m_map:
             self.loadImageData(filepath, False)
-            mat_i, cmat_i = np.unique(self.m_data, return_counts=True) 
-            for i in range(len(mat_i)):          
+            mat_i, cmat_i = np.unique(self.m_data, return_counts=True)
+            for i in range(len(mat_i)):
                 materials_slices[mat_i[i]].append(cmat_i[i] * 100.0/vol)
             if len(mat_i) < len(materials):
                 for j in materials_slices.keys():
                     if j not in mat_i:
-                        materials_slices[j].append(0.0)     
+                        materials_slices[j].append(0.0)
         materials = dict(sorted(materials.items(), key=lambda x: x[0]))
-        materials_slices = dict(sorted(materials_slices.items(), key=lambda x: x[0]))       
+        materials_slices = dict(sorted(materials_slices.items(), key=lambda x: x[0]))
         mat = np.array(list(materials.keys()))
         cmat = np.array(list(materials.values()))
         cmat = cmat*100.0/vol_total
@@ -689,7 +702,7 @@ class TomoViewer(QtWidgets.QMainWindow):
         self.m_data = convertQImageToNumpy(self.m_image)
         if _updateWindow:
             self.labelDimensions.setText("[h="+str(self.m_data.shape[0])+",w="+str(self.m_data.shape[1])+"]")
-            self.plotImage()     
+            self.plotImage()
 
     # method
     def removeTempImagens(self):
@@ -701,10 +714,10 @@ class TomoViewer(QtWidgets.QMainWindow):
                     except OSError as err:
                         print("Exception handled: {0}".format(err))
                 else:
-                    print("The file does not exist") 
+                    print("The file does not exist")
 
 # This function was adapted from (https://github.com/Entscheider/SeamEater/blob/master/gui/QtTool.py)
-# Project: SeamEater; Author: Entscheider; File: QtTool.py; GNU General Public License v3.0 
+# Project: SeamEater; Author: Entscheider; File: QtTool.py; GNU General Public License v3.0
 # Original function name: qimage2numpy(qimg)
 # We consider just 8 bits images and convert to single depth:
 def convertQImageToNumpy(_qimg):
@@ -725,16 +738,17 @@ def convertQImageToNumpy(_qimg):
     res = np.frombuffer(buf, 'uint8')
     res = res.reshape((h,ow,d)).copy()
     if w != ow:
-        res = res[:,:w] 
+        res = res[:,:w]
     if d >= 3:
         res = res[:,:,0].copy()
     else:
-        res = res[:,:,0] 
-    return res 
+        res = res[:,:,0]
+    return res
 
-def main():
-    # To ensure that every time you call QSettings not enter the data of your application, 
-    # which will be the settings, you can set them globally for all applications   
+
+def run():
+    # To ensure that every time you call QSettings not enter the data of your application,
+    # which will be the settings, you can set them globally for all applications
     QtCore.QCoreApplication.setApplicationName(ORGANIZATION_NAME)
     QtCore.QCoreApplication.setOrganizationDomain(ORGANIZATION_DOMAIN)
     QtCore.QCoreApplication.setApplicationName(APPLICATION_NAME)
@@ -748,5 +762,15 @@ def main():
     # start the app
     sys.exit(app.exec_())
 
+
+def split_tiff_stack(input_filepath, output_filepath):
+    img = io.imread(input_filepath)
+    if img.ndim == 3:
+        if not os.path.exists(os.path.dirname(output_filepath)):
+            os.makedirs(os.path.dirname(output_filepath))
+        for i in range(img.shape[2]):
+            io.imsave(output_filepath + "_" + str(i) + ".tif", img[:, :, i], check_contrast=False)
+
+
 if __name__ == '__main__':
-    main()
+    run()
