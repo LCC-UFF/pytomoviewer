@@ -18,38 +18,21 @@ pytomoviewer is an open-source [Python](https://www.python.org/) script implemen
 + Simple generation of 3D data by replicating a single TIFF image; 
 + Conversion of a full grayscale image into a binary image.
 
-## Requirements
-
-The following libraries are required, which are likely already installed on your system:
-+ [Python 3](https://www.python.org/)
-+ [JSON](https://docs.python.org/3/library/json.html)
-+ [NumPy](https://numpy.org/)
-+ [SciPy](https://www.scipy.org/)
-+ [PyQt5](https://www.riverbankcomputing.com/software/pyqt/) incl. QtCore, QtGui and QtWidgets
-+ [Matplotlib](https://matplotlib.org/)
-
 
 ## Installation
 
-The libraries can be installed using the provided ``requirements.txt``:
+The pytomoviewer tool and its dependencies can be installed using:
 
 ```
-git clone https://github.com/LCC-UFF/pytomoviewer
-cd pytomoviewer
-pip3 install -r requirements.txt
-pip3 install .
+pip install git+https://github.com/LCC-UFF/pytomoviewer
 ```
 
 ## How to run
 
-### Linux or Windows
-
-A Python script can be executed at command line by invoking the interpreter on your application.
-
-From the directory containing pytomoviewer.py run: 
+After installation, you can launch pytomoviewer by using the following command from a terminal: 
 
 ```
-python3 pytomoviewer.py
+python -c 'import pytomoviewer as ptv; ptv.run()'
 ```
 
 ## Graphical User Interface (GUI) components
