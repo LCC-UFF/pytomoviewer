@@ -141,5 +141,29 @@ b) Opening pytomoviewer (<a href="#figure2">Figure 2</a>) with Python via mouse 
 </p>
 <p align="center">Figure 6: Output files provided by pytomoviewer.</p>
 
+## Citation
+
++ Toolkit for image-based numerical homogenization (alongside [[chfem_gpu](https://gitlab.com/cortezpedro/chfem_gpu) and [chpack](https://gitlab.com/lcc-uff/Chpack.jl)).
+**Obs.:** If you use `pyTomoviewer` in your academic work, it is kindly requested that you cite this reference.
+
+> Lopes, Pedro CF, et al. (2023). 
+> Simulation toolkit for digital material characterization of large image-based microstructures. 
+> Computational Materials Science 219 (2023): 112021 
+> https://doi.org/10.1016/j.commatsci.2023.112021
+
+Or, using the following BibTeX entry:
+
+```Bibtex
+@article{toolkit2023,
+    title = {Simulation toolkit for digital material characterization of large image-based microstructures},
+    author = {Pedro C.F. Lopes and Rafael S. Vianna and Victor W. Sapucaia and Federico Semeraro and Ricardo Leiderman and André M.B. Pereira},
+    journal = {Computational Materials Science},
+    volume = {219},
+    pages = {112021},
+    year = {2023},
+    publisher={Elsevier}
+}
+```
+
 ## Acknowledgements
 This research was carried out in association with the ongoing R&D project registered as ANP nº 21289-4, “Desenvolvimento de modelos matemáticos, estatísticos e computacionais para o aperfeiçoamento da caracterização petrofísica de reservatórios por Ressonância Magnética Nuclear (RMN)" (UFF/Shell Brasil/ANP), sponsored by Shell Brasil under the ANP R&D levy as “Compromisso de Investimentos com Pesquisa e Desenvolvimento”. The authors also recognize the support from CAPES, CNPq and FAPERJ.
