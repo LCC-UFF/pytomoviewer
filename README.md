@@ -26,6 +26,7 @@ The pytomoviewer tool and its dependencies can be installed using:
 ```
 pip install git+https://github.com/LCC-UFF/pytomoviewer
 ```
+NOTE: We actively support and test Python 3.6 up to Python 3.10.  To ensure compatibility, please confirm that you are using the appropriate version of Python.
 
 ## How to run
 
