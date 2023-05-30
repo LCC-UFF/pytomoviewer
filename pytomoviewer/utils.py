@@ -214,7 +214,7 @@ class TomoViewer(QtWidgets.QMainWindow):
     def newImage2D_CI(self):
         nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Length:", 100, 1, 2024, 1)
         if ok1:
-            f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3)
+            f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3, QtCore.Qt.WindowFlags(), 0.05)
             if ok2:
                 ny = nx
                 r = np.sqrt(4*f/np.pi)*nx*.5
@@ -248,7 +248,7 @@ class TomoViewer(QtWidgets.QMainWindow):
     def newImage3D_SI(self):
         nx, ok1 = QtWidgets.QInputDialog.getInt(self,"Size","Length:", 100, 1, 2024, 1)
         if ok1:
-            f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3)
+            f, ok2 = QtWidgets.QInputDialog.getDouble(self,"Fraction","Inclusion fraction 0 < x < 1:", 0.5, 0, 1, 3, QtCore.Qt.WindowFlags(), 0.05)
             if ok2:
                 ny = nx
                 nz = nx
