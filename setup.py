@@ -25,7 +25,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/LCC-UFF/pytomoviewer",
     platforms=["Linux", "Mac", "Windows"],
-    packages=setuptools.find_packages(),
+    packages=find_packages(),
     cmdclass={'clean': CleanCommand},
     install_requires=[
         "numpy",
