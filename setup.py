@@ -31,7 +31,7 @@ setup(
         "numpy",
         "scipy",
         "matplotlib",
-        "PyQt5",
+        "PyQt5==5.12",
         "scikit-image",
     ],
 )
